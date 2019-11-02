@@ -22,7 +22,7 @@ class Randoms
 
     public function practiceLimit(): int
     {
-        return $this->generator->randomNumber();
+        return $this->generator->numberBetween(1, 10);
     }
 
     public function isCardio(): bool
@@ -45,7 +45,7 @@ class Randoms
         return $this->generator->boolean;
     }
 
-    public function quantity()
+    public function quantity(): int
     {
         return $this->generator->numberBetween(1, 10);
     }

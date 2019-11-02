@@ -4,22 +4,43 @@
 namespace App\Services;
 
 
+use App\Models\Exercise;
 use App\Models\Participant;
 
 class WodService
 {
+    /** @var CsvService $csvService */
+    private $csvService;
+
+    public function __construct()
+    {
+        $this->csvService = new CsvService();
+    }
+
     public function getParticipantsListFromCSV(string $filepath): array
     {
         $list = [];
-        $file = fopen($filepath, 'r');
-        $row = 0;
+        $participants = $this->csvService->readCsv($filepath);
 
-        while (($line = fgetcsv($file, 1000)) !== false) {
-            if ($row === 0) {
-                $row++;
-                continue;
-            }
-            array_push($list, new Participant($line[0], $line[1]));
+        foreach ($participants as $participant) {
+            array_push($list, new Participant($participant[0], $participant[1]));
+        }
+
+        return $list;
+    }
+
+    public function getExercisesListFromCSV(string $filepath): array
+    {
+        $list = [];
+        $exercises = $this->csvService->readCsv($filepath);
+
+        foreach ($exercises as $exercise) {
+            array_push($list, new Exercise(
+                $exercise[0],
+                $exercise[1],
+                $exercise[2],
+                $exercise[3]
+            ));
         }
 
         return $list;

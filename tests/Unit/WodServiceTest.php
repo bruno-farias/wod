@@ -38,4 +38,23 @@ class WodServiceTest extends TestCase
         }
         unlink($filepath);
     }
+
+    public function testGetExercisesListSucceeds()
+    {
+        $quantity = $this->randoms->quantity();
+        $expectedList = $this->creator->createExercisesArray($quantity);
+        $filepath = $this->creator->createExercisesCSVFile($expectedList);
+
+        $list = $this->service->getExercisesListFromCSV($filepath);
+
+        $this->assertCount($quantity, $list);
+        array_shift($expectedList);
+        for ($x = 0; $x < $quantity; $x++) {
+            $this->assertEquals($expectedList[$x][0], $list[$x]->getName());
+            $this->assertEquals($expectedList[$x][1], $list[$x]->getPracticeLimit());
+            $this->assertEquals($expectedList[$x][2], $list[$x]->getIsCardio());
+            $this->assertEquals($expectedList[$x][3], $list[$x]->getSimultaneousUsage());
+        }
+        unlink($filepath);
+    }
 }
