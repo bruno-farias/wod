@@ -79,6 +79,53 @@ class WodServiceTest extends TestCase
         $this->assertTrue($this->service->reachedPracticeLimit($exerciseWithPraticeLimit, $participant, $list));
     }
 
+    public function testGroupExercisesOnListSucceeds()
+    {
+        $list = [];
+        $exerciseToGroup = $this->creator->createCustomExercise();
+        $exerciseNotGrouped = $this->creator->createCustomExercise();
+
+        $list[] = $this->creator->createWod(null, $exerciseToGroup);
+        $list[] = $this->creator->createWod(null, $exerciseToGroup);
+        $list[] = $this->creator->createWod(null, $exerciseNotGrouped);
+
+        $result = $this->service->groupExercise($list);
+
+        $this->assertCount(2, $result);
+        $this->assertCount(2, $result[$exerciseToGroup->getName()]);
+        $this->assertCount(1, $result[$exerciseNotGrouped->getName()]);
+    }
+
+    public function testFilterRoundSucceeds()
+    {
+        $list = [];
+
+        $filterRound = $this->randoms->round();
+        $otherRound = $this->randoms->round($filterRound);
+
+        $list[] = $this->creator->createWod($filterRound);
+        $list[] = $this->creator->createWod($filterRound);
+        $list[] = $this->creator->createWod($otherRound);
+
+        $result = $this->service->filterRound($list, $filterRound);
+
+        $this->assertCount(2, $result);
+    }
+
+    public function testFilterByParticipantSucceeds()
+    {
+        $list = [];
+        $participantToFilter = $this->creator->createParticipant();
+
+        $list[] = $this->creator->createWod(null, null, $participantToFilter);
+        $list[] = $this->creator->createWod(null, null, $participantToFilter);
+        $list[] = $this->creator->createWod(null, null, $this->creator->createParticipant());
+
+        $result = $this->service->filterParticipant($list, $participantToFilter);
+
+        $this->assertCount(2, $result);
+    }
+
     private function createCardioRound(): Wod
     {
         return new Wod(

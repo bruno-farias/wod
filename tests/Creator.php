@@ -6,6 +6,7 @@ namespace Tests;
 
 use App\Models\Exercise;
 use App\Models\Participant;
+use App\Models\Wod;
 
 class Creator
 {
@@ -47,8 +48,13 @@ class Creator
         return new Participant($this->randoms->participantName(), true);
     }
 
-    public function createCustomExercise(string $name, int $practiceLimit, bool $isCardio, int $simultaneousUsage): Exercise
+    public function createCustomExercise(?string $name = null, int $practiceLimit = null, bool $isCardio = null, int $simultaneousUsage = null): Exercise
     {
+        $name = $name ?? $this->randoms->exerciseName();
+        $practiceLimit = $practiceLimit ?? $this->randoms->practiceLimit();
+        $isCardio = $isCardio ?? $this->randoms->isCardio();
+        $simultaneousUsage = $simultaneousUsage ?? $this->randoms->simultaneousUsage();
+
         return new Exercise($name, $practiceLimit, $isCardio, $simultaneousUsage);
     }
 
@@ -70,6 +76,15 @@ class Creator
             $this->randoms->isCardio(),
             $this->randoms->simultaneousUsage()
         );
+    }
+
+    public function createWod(int $round = null, Exercise $exercise = null, Participant $participant = null): Wod
+    {
+        $round = $round ?? $this->randoms->round();
+        $exercise = $exercise ?? $this->createCustomExercise();
+        $participant = $participant ?? $this->createParticipant();
+
+        return new Wod($round, $exercise, $participant);
     }
 
     public function createExercisesArray(int $quantity): array

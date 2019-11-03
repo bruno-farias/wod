@@ -17,10 +17,14 @@ class WodService
     private const PARTICIPANTS_LIST = './data/participants.csv';
     private const EXERCISES_LIST = './data/exercises.csv';
     private const WOD_DURATION = 30;
+    private $participants;
+    private $exerciseList;
 
     public function __construct()
     {
         $this->csvService = new CsvService();
+        $this->participants = $this->getParticipantsListFromCSV(self::PARTICIPANTS_LIST);
+        $this->exerciseList = $this->getExercisesListFromCSV(self::EXERCISES_LIST);
     }
 
     public function getParticipantsListFromCSV(string $filepath): array
@@ -54,66 +58,56 @@ class WodService
 
     public function createWod(): void
     {
-        $participants = $this->getParticipantsListFromCSV(self::PARTICIPANTS_LIST);
-        $exerciseList = $this->getExercisesListFromCSV(self::EXERCISES_LIST);
-
         $table = new ConsoleTable();
         $table->setHeaders(['Minute', 'Participant', 'Beginner', 'Exercise', 'Cardio']);
+        $list = [];
 
-        $data = [];
-
-        /** @var Participant $participant */
-        foreach ($participants as $participant) {
-            array_push($data, $this->buildWod($participant, $exerciseList));
+        for ($round = 1; $round <= self::WOD_DURATION; $round++) {
+            foreach ($this->participants as $participant) {
+                $exercise = $this->getExercise($list, $participant, $round);
+                $list[] = new Wod($round, $exercise, $participant);
+            }
         }
 
-
-        foreach ($data as $wod) {
-            /** @var Wod $item */
-            foreach ($wod as $item) {
-                $table->addRow([
-                    $item->getRound(),
-                    $item->getParticipant()->getName(),
-                    $item->getParticipant()->getIsBeginner(),
-                    $item->getExercise()->getName(),
-                    $item->getExercise()->getIsCardio()
-                ]);
-            }
+        foreach ($list as $wod) {
+            $table->addRow([
+                $wod->getRound(),
+                $wod->getParticipant()->getName(),
+                $wod->getParticipant()->getIsBeginner(),
+                $wod->getExercise()->getName(),
+                $wod->getExercise()->getIsCardio()
+            ]);
         }
 
         $table->display();
     }
 
-    public function getExercise(array $exerciseList, array $currentList, Participant $participant): Exercise
+    public function getExercise(array $currentList, Participant $participant, int $round): Exercise
     {
-        $exerciseItem = array_rand($exerciseList);
+        $exerciseItem = array_rand($this->exerciseList);
         /** @var Exercise $exercise */
-        $exercise = $exerciseList[$exerciseItem];
+        $exercise = $this->exerciseList[$exerciseItem];
+        $participantList = $this->filterParticipant($currentList, $participant);
+
+        $roundList = $this->filterRound($currentList, $round);
+        $roundExercises = $this->groupExercise($roundList);
 
         /** Check to avoid sequence of cardio exercise */
         while ($this->cardioIsNotAllowed($exercise, $currentList)) {
-            $exercise = $this->getExercise($exerciseList, $currentList, $participant);
+            $exercise = $this->getExercise($participantList, $participant, $round);
         }
 
-        while ($this->reachedPracticeLimit($exercise, $participant, $currentList)) {
-            $exercise = $this->getExercise($exerciseList, $currentList, $participant);
+        /** Check if we can add a limited practice exercise to a participant */
+        while ($this->reachedPracticeLimit($exercise, $participant, $participantList)) {
+            $exercise = $this->getExercise($participantList, $participant, $round);
+        }
+
+        /** Check if we can add a exercise that has equipment usage limitation */
+        while ($this->reachedSimultaneousLimit($exercise, $roundExercises)) {
+            $exercise = $this->getExercise($participantList, $participant, $round);
         }
 
         return $exercise;
-    }
-
-    public function buildWod(Participant $participant, array $exerciseList)
-    {
-        $list = [];
-        $breakCount = $participant->getIsBeginner() ? 4 : 2;
-
-        for ($round = 1; $round <= self::WOD_DURATION; $round++) {
-            /** @var Exercise $exercise */
-            $exercise = $this->getExercise($exerciseList, $list, $participant);
-
-            $list[] = new Wod($round, $exercise, $participant);
-        }
-        return $list;
     }
 
     public function reachedPracticeLimit(Exercise $currentExercise, Participant $participant, array $currentList): bool
@@ -143,5 +137,44 @@ class WodService
         /** @var Wod $previous */
         $previous = end($currentList);
         return $previous->getExercise()->getIsCardio() === $exercise->getIsCardio();
+    }
+
+    public function reachedSimultaneousLimit(Exercise $currentExercise, array $roundList): bool
+    {
+        if ($currentExercise->getSimultaneousUsage() === 0) {
+            return false;
+        }
+
+        return count($roundList[$currentExercise->getName()]) >= $currentExercise->getSimultaneousUsage();
+    }
+
+    public function filterParticipant(array $list, Participant $participant): array
+    {
+        $filteredList = [];
+        foreach ($list as $item) {
+            if ($item->getParticipant()->getName() === $participant->getName()) {
+                array_push($filteredList, $item);
+            }
+        }
+        return $filteredList;
+    }
+
+    public function filterRound(array $list, int $round): array
+    {
+        return array_filter($list, function ($item) use ($round) {
+            /** Wod $item */
+            return ($item->getRound() === $round);
+        });
+    }
+
+    public function groupExercise(array $list): array
+    {
+        $group = [];
+        foreach ($list as $item) {
+            /** Wod $item */
+            $group[$item->getExercise()->getName()][] = $item;
+        }
+
+        return $group;
     }
 }

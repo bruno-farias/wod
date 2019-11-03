@@ -50,9 +50,16 @@ class Randoms
         return $this->generator->numberBetween(1, 10);
     }
 
-    public function round()
+    public function round(int $except = null): int
     {
-        return $this->generator->numberBetween(1, 30);
+        $round = $this->generator->numberBetween(1, 30);
+        if (!is_null($except)) {
+            while ($round === $except) {
+                $round = $this->generator->numberBetween(1, 30);
+            }
+        }
+
+        return $round;
     }
 
 }
