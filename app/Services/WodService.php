@@ -59,10 +59,11 @@ class WodService
     public function createWod(): void
     {
         $table = new ConsoleTable();
-        $table->setHeaders(['Minute', 'Participant', 'Beginner', 'Exercise', 'Cardio']);
+        $table->setHeaders(['Minute', 'Participant', 'Level', 'Exercise', 'Cardio']);
         $list = [];
 
         for ($round = 1; $round <= self::WOD_DURATION; $round++) {
+            /** @var Participant $participant */
             foreach ($this->participants as $participant) {
                 $exercise = $this->getExercise($list, $participant, $round);
                 $list[] = new Wod($round, $exercise, $participant);
@@ -73,7 +74,7 @@ class WodService
             $table->addRow([
                 $wod->getRound(),
                 $wod->getParticipant()->getName(),
-                $wod->getParticipant()->getIsBeginner(),
+                $wod->getParticipant()->getLevelDescription(),
                 $wod->getExercise()->getName(),
                 $wod->getExercise()->getIsCardio()
             ]);
@@ -95,19 +96,22 @@ class WodService
         /** Check to avoid sequence of cardio exercise */
         while ($this->cardioIsNotAllowed($exercise, $currentList)) {
             $exercise = $this->getExercise($participantList, $participant, $round);
+            break;
         }
 
         /** Check if we can add a limited practice exercise to a participant */
         while ($this->reachedPracticeLimit($exercise, $participant, $participantList)) {
             $exercise = $this->getExercise($participantList, $participant, $round);
+            break;
         }
 
         /** Check if we can add a exercise that has equipment usage limitation */
         while ($this->reachedSimultaneousLimit($exercise, $roundExercises)) {
             $exercise = $this->getExercise($participantList, $participant, $round);
+            break;
         }
 
-        return $exercise;
+        return $this->shouldAddBreak($participant, $round, $exercise);
     }
 
     public function reachedPracticeLimit(Exercise $currentExercise, Participant $participant, array $currentList): bool
@@ -136,12 +140,15 @@ class WodService
         }
         /** @var Wod $previous */
         $previous = end($currentList);
-        return $previous->getExercise()->getIsCardio() === $exercise->getIsCardio();
+        return $previous->getExercise()->getIsCardio() == $exercise->getIsCardio();
     }
 
     public function reachedSimultaneousLimit(Exercise $currentExercise, array $roundList): bool
     {
-        if ($currentExercise->getSimultaneousUsage() === 0) {
+        $noRestriction = $currentExercise->getSimultaneousUsage() === 0;
+        $notAssigned = is_null($roundList[$currentExercise->getName()]);
+
+        if ($noRestriction || $notAssigned) {
             return false;
         }
 
@@ -150,13 +157,9 @@ class WodService
 
     public function filterParticipant(array $list, Participant $participant): array
     {
-        $filteredList = [];
-        foreach ($list as $item) {
-            if ($item->getParticipant()->getName() === $participant->getName()) {
-                array_push($filteredList, $item);
-            }
-        }
-        return $filteredList;
+        return array_filter($list, function ($item) use ($participant) {
+            return $item->getParticipant()->getName() == $participant->getName();
+        });
     }
 
     public function filterRound(array $list, int $round): array
@@ -176,5 +179,23 @@ class WodService
         }
 
         return $group;
+    }
+
+    private function break(): Exercise
+    {
+        return new Exercise('Break', 0, false, 0);
+    }
+
+    private function shouldAddBreak(Participant $participant, int $round, Exercise $exercise): Exercise
+    {
+        $percentage = floor(($round / self::WOD_DURATION) * 100);
+
+        if ($participant->getIsBeginner() && in_array($percentage, [20, 40, 60, 80])) {
+            $exercise = $this->break();
+        } elseif (!$participant->getIsBeginner() && in_array($percentage, [33, 66])) {
+            $exercise = $this->break();
+        }
+
+        return $exercise;
     }
 }
