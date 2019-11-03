@@ -7,6 +7,7 @@ namespace Tests;
 use App\Models\Exercise;
 use App\Models\Participant;
 use App\Models\Wod;
+use Tests\Unit\WodServiceTest;
 
 class Creator
 {
@@ -111,6 +112,24 @@ class Creator
         $this->createCSVFile($exercises, $filename);
 
         return $filename;
+    }
+
+    public function createPracticeLimitRound(Participant $participant)
+    {
+        return new Wod(
+            $this->randoms->round(),
+            $this->createPracticeLimitExercise(),
+            $participant
+        );
+    }
+
+    public function createCardioRound(): Wod
+    {
+        return new Wod(
+            $this->randoms->round(),
+            $this->createCardioExercise(),
+            $this->createParticipant()
+        );
     }
 
     private function createCSVFile(array $items, string $filename): void

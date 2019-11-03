@@ -4,8 +4,7 @@
 namespace Tests\Unit;
 
 
-use App\Models\Participant;
-use App\Models\Wod;
+use App\Models\Exercise;
 use App\Services\WodService;
 use Tests\Creator;
 use Tests\TestCase;
@@ -24,7 +23,7 @@ class WodServiceTest extends TestCase
         $this->creator = new Creator();
     }
 
-    public function testGetParticipantsListSucceeds()
+    public function testGetParticipantsListSucceeds(): void
     {
         $quantity = $this->randoms->quantity();
         $expectedList = $this->creator->createParticipantsArray($quantity);
@@ -41,7 +40,7 @@ class WodServiceTest extends TestCase
         unlink($filepath);
     }
 
-    public function testGetExercisesListSucceeds()
+    public function testGetExercisesListSucceeds(): void
     {
         $quantity = $this->randoms->quantity();
         $expectedList = $this->creator->createExercisesArray($quantity);
@@ -60,26 +59,26 @@ class WodServiceTest extends TestCase
         unlink($filepath);
     }
 
-    public function testDontAddTwoCardioExercisesInSequence()
+    public function testDontAddTwoCardioExercisesInSequence(): void
     {
         $list = [];
-        $list[] = $this->createCardioRound();
+        $list[] = $this->creator->createCardioRound();
 
         $cardioExercise = $this->creator->createCardioExercise();
         $this->assertTrue($this->service->cardioIsNotAllowed($cardioExercise, $list));
     }
 
-    public function testDontAssignMoreThanPracticeLimit()
+    public function testDontAssignMoreThanPracticeLimit(): void
     {
         $participant = $this->creator->createParticipantBeginner();
         $list = [];
-        $list[] = $this->createPracticeLimitRound($participant);
+        $list[] = $this->creator->createPracticeLimitRound($participant);
 
         $exerciseWithPraticeLimit = $this->creator->createPracticeLimitExercise();
         $this->assertTrue($this->service->reachedPracticeLimit($exerciseWithPraticeLimit, $participant, $list));
     }
 
-    public function testGroupExercisesOnListSucceeds()
+    public function testGroupExercisesOnListSucceeds(): void
     {
         $list = [];
         $exerciseToGroup = $this->creator->createCustomExercise();
@@ -96,7 +95,7 @@ class WodServiceTest extends TestCase
         $this->assertCount(1, $result[$exerciseNotGrouped->getName()]);
     }
 
-    public function testFilterRoundSucceeds()
+    public function testFilterRoundSucceeds(): void
     {
         $list = [];
 
@@ -112,7 +111,7 @@ class WodServiceTest extends TestCase
         $this->assertCount(2, $result);
     }
 
-    public function testFilterByParticipantSucceeds()
+    public function testFilterByParticipantSucceeds(): void
     {
         $list = [];
         $participantToFilter = $this->creator->createParticipant();
@@ -126,21 +125,46 @@ class WodServiceTest extends TestCase
         $this->assertCount(2, $result);
     }
 
-    private function createCardioRound(): Wod
+    public function testReturnsTrueWhenExerciseReachedSimultaneousLimitInRound(): void
     {
-        return new Wod(
-            $this->randoms->round(),
-            $this->creator->createCardioExercise(),
-            $this->creator->createParticipant()
-        );
+        $list = [];
+        $exerciseWithLimit = $this->creator->createCustomExercise(null, null, null, 1);
+
+        $list[] = $this->creator->createWod(1, $exerciseWithLimit);
+        $list[] = $this->creator->createWod(1, $exerciseWithLimit);
+
+        $roundList = $this->service->filterRound($list, 1);
+        $roundExercises = $this->service->groupExercise($roundList);
+
+        $result = $this->service->reachedSimultaneousLimit($exerciseWithLimit, $roundExercises);
+
+        $this->assertTrue($result);
     }
 
-    private function createPracticeLimitRound(Participant $participant)
+    public function testReturnsFalseWhenExerciseNotReachedSimultaneousLimitInRound(): void
     {
-        return new Wod(
-            $this->randoms->round(),
-            $this->creator->createPracticeLimitExercise(),
-            $participant
-        );
+        $list = [];
+        $exerciseWithLimit = $this->creator->createCustomExercise(null, null, null, 3);
+
+        $list = $this->createWodListForSimultaneousTest($exerciseWithLimit, $list);
+
+        $roundList = $this->service->filterRound($list, 1);
+        $roundExercises = $this->service->groupExercise($roundList);
+
+        $result = $this->service->reachedSimultaneousLimit($exerciseWithLimit, $roundExercises);
+        $this->assertFalse($result);
     }
+
+    /**
+     * @param Exercise $exerciseWithLimit
+     * @param array $list
+     * @return array
+     */
+    private function createWodListForSimultaneousTest(Exercise $exerciseWithLimit, array $list): array
+    {
+        $list[] = $this->creator->createWod(1, $exerciseWithLimit);
+        $list[] = $this->creator->createWod(1, $exerciseWithLimit);
+        return $list;
+    }
+
 }
