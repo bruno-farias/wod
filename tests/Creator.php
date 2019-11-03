@@ -5,6 +5,7 @@ namespace Tests;
 
 
 use App\Models\Exercise;
+use App\Models\Participant;
 
 class Creator
 {
@@ -34,6 +35,41 @@ class Creator
         $this->createCSVFile($participants, $filename);
 
         return $filename;
+    }
+
+    public function createParticipant(): Participant
+    {
+        return new Participant($this->randoms->participantName(), $this->randoms->isBeginner());
+    }
+
+    public function createParticipantBeginner()
+    {
+        return new Participant($this->randoms->participantName(), true);
+    }
+
+    public function createCustomExercise(string $name, int $practiceLimit, bool $isCardio, int $simultaneousUsage): Exercise
+    {
+        return new Exercise($name, $practiceLimit, $isCardio, $simultaneousUsage);
+    }
+
+    public function createCardioExercise()
+    {
+        return new Exercise(
+            $this->randoms->exerciseName(),
+            $this->randoms->practiceLimit(),
+            true,
+            $this->randoms->simultaneousUsage()
+        );
+    }
+
+    public function createPracticeLimitExercise()
+    {
+        return new Exercise(
+            $this->randoms->exerciseName(),
+            true,
+            $this->randoms->isCardio(),
+            $this->randoms->simultaneousUsage()
+        );
     }
 
     public function createExercisesArray(int $quantity): array

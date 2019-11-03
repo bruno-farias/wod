@@ -4,6 +4,8 @@
 namespace Tests\Unit;
 
 
+use App\Models\Participant;
+use App\Models\Wod;
 use App\Services\WodService;
 use Tests\Creator;
 use Tests\TestCase;
@@ -56,5 +58,42 @@ class WodServiceTest extends TestCase
             $this->assertEquals($expectedList[$x][3], $list[$x]->getSimultaneousUsage());
         }
         unlink($filepath);
+    }
+
+    public function testDontAddTwoCardioExercisesInSequence()
+    {
+        $list = [];
+        $list[] = $this->createCardioRound();
+
+        $cardioExercise = $this->creator->createCardioExercise();
+        $this->assertTrue($this->service->cardioIsNotAllowed($cardioExercise, $list));
+    }
+
+    public function testDontAssignMoreThanPracticeLimit()
+    {
+        $participant = $this->creator->createParticipantBeginner();
+        $list = [];
+        $list[] = $this->createPracticeLimitRound($participant);
+
+        $exerciseWithPraticeLimit = $this->creator->createPracticeLimitExercise();
+        $this->assertTrue($this->service->reachedPracticeLimit($exerciseWithPraticeLimit, $participant, $list));
+    }
+
+    private function createCardioRound(): Wod
+    {
+        return new Wod(
+            $this->randoms->round(),
+            $this->creator->createCardioExercise(),
+            $this->creator->createParticipant()
+        );
+    }
+
+    private function createPracticeLimitRound(Participant $participant)
+    {
+        return new Wod(
+            $this->randoms->round(),
+            $this->creator->createPracticeLimitExercise(),
+            $participant
+        );
     }
 }
