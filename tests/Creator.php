@@ -39,14 +39,12 @@ class Creator
         return $filename;
     }
 
-    public function createParticipant(): Participant
+    public function createParticipant(string $name = null, bool $beginner = null): Participant
     {
-        return new Participant($this->randoms->participantName(), $this->randoms->isBeginner());
-    }
+        $name = $name ?? $this->randoms->participantName();
+        $beginner = $beginner ?? $this->randoms->isBeginner();
 
-    public function createParticipantBeginner()
-    {
-        return new Participant($this->randoms->participantName(), true);
+        return new Participant($name, $beginner);
     }
 
     public function createCustomExercise(?string $name = null, int $practiceLimit = null, bool $isCardio = null, int $simultaneousUsage = null): Exercise
@@ -59,7 +57,7 @@ class Creator
         return new Exercise($name, $practiceLimit, $isCardio, $simultaneousUsage);
     }
 
-    public function createCardioExercise()
+    public function createCardioExercise(): Exercise
     {
         return new Exercise(
             $this->randoms->exerciseName(),
@@ -69,7 +67,7 @@ class Creator
         );
     }
 
-    public function createPracticeLimitExercise()
+    public function createPracticeLimitExercise(): Exercise
     {
         return new Exercise(
             $this->randoms->exerciseName(),
@@ -114,7 +112,7 @@ class Creator
         return $filename;
     }
 
-    public function createPracticeLimitRound(Participant $participant)
+    public function createPracticeLimitRound(Participant $participant): Wod
     {
         return new Wod(
             $this->randoms->round(),

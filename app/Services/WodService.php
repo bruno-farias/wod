@@ -76,7 +76,7 @@ class WodService
                 $wod->getParticipant()->getName(),
                 $wod->getParticipant()->getLevelDescription(),
                 $wod->getExercise()->getName(),
-                $wod->getExercise()->getIsCardio()
+                $wod->getExercise()->getIsCardio() ? 'Yes' : 'No'
             ]);
         }
 
@@ -111,7 +111,7 @@ class WodService
             break;
         }
 
-        return $this->shouldAddBreak($participant, $round, $exercise);
+        return $this->shouldAddBreak($participant, $round) ? $this->break() : $exercise;
     }
 
     public function reachedPracticeLimit(Exercise $currentExercise, Participant $participant, array $currentList): bool
@@ -181,21 +181,21 @@ class WodService
         return $group;
     }
 
+    public function shouldAddBreak(Participant $participant, int $round, int $wodDuration = self::WOD_DURATION): bool
+    {
+        $percentage = floor(($round / $wodDuration) * 100);
+
+        if ($participant->getIsBeginner() && in_array($percentage, [20, 40, 60, 80])) {
+            return true;
+        } elseif (!$participant->getIsBeginner() && in_array($percentage, [33, 66])) {
+            return true;
+        }
+
+        return false;
+    }
+
     private function break(): Exercise
     {
         return new Exercise('Break', 0, false, 0);
-    }
-
-    private function shouldAddBreak(Participant $participant, int $round, Exercise $exercise): Exercise
-    {
-        $percentage = floor(($round / self::WOD_DURATION) * 100);
-
-        if ($participant->getIsBeginner() && in_array($percentage, [20, 40, 60, 80])) {
-            $exercise = $this->break();
-        } elseif (!$participant->getIsBeginner() && in_array($percentage, [33, 66])) {
-            $exercise = $this->break();
-        }
-
-        return $exercise;
     }
 }

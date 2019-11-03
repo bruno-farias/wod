@@ -20,7 +20,6 @@ class Participant
         $this->isBeginner = $isBeginner;
     }
 
-
     /**
      * @return string
      */

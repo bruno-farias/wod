@@ -70,7 +70,7 @@ class WodServiceTest extends TestCase
 
     public function testDontAssignMoreThanPracticeLimit(): void
     {
-        $participant = $this->creator->createParticipantBeginner();
+        $participant = $this->creator->createParticipant(null, true);
         $list = [];
         $list[] = $this->creator->createPracticeLimitRound($participant);
 
@@ -155,11 +155,44 @@ class WodServiceTest extends TestCase
         $this->assertFalse($result);
     }
 
-    /**
-     * @param Exercise $exerciseWithLimit
-     * @param array $list
-     * @return array
-     */
+    public function testShouldAddBreakForBeginner(): void
+    {
+        $noob = $this->creator->createParticipant(null, true);
+        $list = [];
+        $list[] = $this->creator->createWod(1, null, $noob);
+        $list[] = $this->creator->createWod(2, null, $noob);
+        $list[] = $this->creator->createWod(3, null, $noob);
+
+        $this->assertTrue($this->service->shouldAddBreak($noob, 4, 5));
+    }
+
+    public function testShouldNotAddBreakForBeginner(): void
+    {
+        $noob = $this->creator->createParticipant(null, true);
+        $list = [];
+        $list[] = $this->creator->createWod(1, null, $noob);
+
+        $this->assertFalse($this->service->shouldAddBreak($noob, 2));
+    }
+
+    public function testShouldAddBreakForPro(): void
+    {
+        $professional = $this->creator->createParticipant(null, false);
+        $list = [];
+        $list[] = $this->creator->createWod(1, null, $professional);
+
+        $this->assertTrue($this->service->shouldAddBreak($professional, 2, 3));
+    }
+
+    public function testShouldNotAddBreakForPro(): void
+    {
+        $professional = $this->creator->createParticipant(null, false);
+        $list = [];
+        $list[] = $this->creator->createWod(1, null, $professional);
+
+        $this->assertFalse($this->service->shouldAddBreak($professional, 2));
+    }
+
     private function createWodListForSimultaneousTest(Exercise $exerciseWithLimit, array $list): array
     {
         $list[] = $this->creator->createWod(1, $exerciseWithLimit);

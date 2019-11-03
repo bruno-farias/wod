@@ -65,6 +65,4 @@ class Exercise
             $this->getSimultaneousUsage()
         ];
     }
-
-
 }
